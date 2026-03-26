@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiPlus, FiTrash2, FiAlertTriangle, FiCheckCircle } from "react-icons/fi";
 
@@ -25,6 +25,13 @@ const CONVENIENCE_BAGS: Bag[] = [
 
 export default function TPNAssistant() {
   const navigate = useNavigate();
+
+   useEffect(() => {
+    if (sessionStorage.getItem("pharmacistMode") !== "true") {
+      navigate("/");
+    }
+  }, [navigate]);
+  
   const [selectedBagIndex, setSelectedBagIndex] = useState(0);
   const [addedNa, setAddedNa] = useState(0);
   const [addedK, setAddedK] = useState(0);
@@ -359,7 +366,7 @@ export default function TPNAssistant() {
                       <div className="shrink-0 text-emerald-300 text-lg">
                         <FiCheckCircle />
                       </div>
-                      <p>Calcium and Phosphate concentrations are within standard safe compatibility limits.</p>
+                      <p>Organic phosphate used in this bag is generally compatible with standard calcium concentrations.</p>
                     </div>
                   ) : null}
                 </div>

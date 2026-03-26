@@ -122,7 +122,7 @@ export default function BodyWeightCalculator() {
               <div>
                 <p className="font-bold mb-1">Formulas:</p>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li><b>IBW:</b> Male: 50kg + 0.9 * (Height - 152.4cm); Female: 45.5kg + 0.91kg/cm * (Height - 152.4cm)</li>
+                  <li><b>IBW:</b> Male: 50kg + 0.9 x (Height - 152.4cm); Female: 45.5kg + 0.9 x (Height - 152.4cm)</li>
                   <li><b>AdjBW:</b> IBW + 0.4 × (Actual Weight - IBW)</li>
                   <li><b>BMI (Malaysia):</b> Underweight (&lt;18.5), Normal (18.5–22.9), Overweight (23–27.4), Obese (≥27.5)</li>
                 </ul>
