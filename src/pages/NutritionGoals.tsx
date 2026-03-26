@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiTarget, FiActivity, FiAlertCircle, FiCheckCircle, FiInfo, FiPlus, FiTrash2 } from "react-icons/fi";
 
@@ -10,12 +10,6 @@ interface ClinicalState {
 }
 
 const CLINICAL_STATES: Record<string, ClinicalState> = {
-  stable: {
-    label: "Stable / Non-Critical",
-    kcalRange: [20, 25],
-    proteinRange: [0.8, 1.0],
-    description: "Standard maintenance for stable patients."
-  },
   postOp: {
     label: "Post-Operative (Major)",
     kcalRange: [25, 30],
@@ -39,6 +33,12 @@ const CLINICAL_STATES: Record<string, ClinicalState> = {
     kcalRange: [35, 40],
     proteinRange: [2.0, 2.5],
     description: "Extreme hypermetabolism and protein loss."
+  },
+  stable: {
+    label: "Stable / Non-Critical",
+    kcalRange: [20, 25],
+    proteinRange: [0.8, 1.0],
+    description: "Standard maintenance for stable patients."
   }
 };
 
@@ -58,11 +58,12 @@ const EN_PRODUCTS: ENProduct[] = [
   { id: "vital", name: "Abbott Vital", type: "solution", kcalPerUnit: 1.5, proteinPerUnit: 0.0675, unitLabel: "mL", defaultAmount: 200 },
   { id: "nepro", name: "Nepro", type: "solution", kcalPerUnit: 1.8227, proteinPerUnit: 0.081, unitLabel: "mL", defaultAmount: 220 },
   { id: "resource_fruit", name: "Resource Fruit", type: "solution", kcalPerUnit: 1.5, proteinPerUnit: 0.04, unitLabel: "mL", defaultAmount: 200 },
-  { id: "glucerna", name: "Glucerna", type: "solution", kcalPerUnit: 0.962, proteinPerUnit: 0.0428, unitLabel: "mL", defaultAmount: 220 },
+  { id: "glucerna_liquid", name: "Glucerna Liquid", type: "solution", kcalPerUnit: 1.0, proteinPerUnit: 0.046, unitLabel: "mL", defaultAmount: 220 },
   { id: "diben", name: "DIBEN", type: "solution", kcalPerUnit: 1.5, proteinPerUnit: 0.075, unitLabel: "mL", defaultAmount: 200 },
   { id: "boost_isocal", name: "Boost Isocal", type: "solution", kcalPerUnit: 1.0, proteinPerUnit: 0.045, unitLabel: "mL", defaultAmount: 200 },
   // Powders
   { id: "glucobalance", name: "Glucobalance", type: "powder", kcalPerUnit: 251/8, proteinPerUnit: 12.5/8, unitLabel: "Scoops", defaultAmount: 8 },
+  { id: "glucerna_powder", name: "Glucerna Powder", type: "powder", kcalPerUnit: 228/5, proteinPerUnit: 10.16/5, unitLabel: "Scoops", defaultAmount: 5 },
   { id: "myotein", name: "Myotein", type: "powder", kcalPerUnit: 26, proteinPerUnit: 5, unitLabel: "Scoops", defaultAmount: 1 },
   { id: "nutren_optimum", name: "Nutren Optimum", type: "powder", kcalPerUnit: 251/7, proteinPerUnit: 10.2/7, unitLabel: "Scoops", defaultAmount: 7 },
   { id: "ensure", name: "Ensure", type: "powder", kcalPerUnit: 262/6, proteinPerUnit: 10.5/6, unitLabel: "Scoops", defaultAmount: 6 },
@@ -79,8 +80,15 @@ interface SelectedProduct {
 
 export default function NutritionGoals() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (sessionStorage.getItem("pharmacistMode") !== "true") {
+      navigate("/");
+    }
+  }, [navigate]);
+  
   const [weight, setWeight] = useState<number | "">(70);
-  const [stateKey, setStateKey] = useState("stable");
+  const [stateKey, setStateKey] = useState("postOp");
   
   // Enteral Feeding (EN) Inputs
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
@@ -269,7 +277,7 @@ export default function NutritionGoals() {
                           </div>
                           <div>
                             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                              {product?.unitLabel === "mL" ? "Volume (mL)" : "Scoops"}
+                              {product?.unitLabel === "mL" ? "Volume (mL per bottle)" : "Scoops (per serving)"}
                             </label>
                             <input 
                               type="number"
@@ -325,7 +333,10 @@ export default function NutritionGoals() {
                       <p className="text-xs font-bold uppercase opacity-70">Energy Goal</p>
                       <p className="text-[10px] opacity-50 font-bold">{(goals.kcalMin / (w || 1)).toFixed(0)}-{(goals.kcalMax / (w || 1)).toFixed(0)} kcal/kg</p>
                     </div>
-                    <p className="text-2xl font-black">{goals.kcalMin.toFixed(0)}-{goals.kcalMax.toFixed(0)} <span className="text-xs font-normal opacity-50">kcal</span></p>
+                    <div className="text-right">
+                      <p className="text-2xl font-black">{goals.kcalMin.toFixed(0)}-{goals.kcalMax.toFixed(0)} <span className="text-xs font-normal opacity-50">kcal</span></p>
+                      <p className="text-[10px] font-bold text-emerald-400">{((currentEnIntake.kcal / goals.kcalMax) * 100).toFixed(1)}% of max</p>
+                    </div>
                   </div>
                   <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                     <div 
@@ -341,7 +352,10 @@ export default function NutritionGoals() {
                       <p className="text-xs font-bold uppercase opacity-70">Protein Goal</p>
                       <p className="text-[10px] opacity-50 font-bold">{(goals.proteinMin / (w || 1)).toFixed(1)}-{(goals.proteinMax / (w || 1)).toFixed(1)} g/kg</p>
                     </div>
-                    <p className="text-2xl font-black">{goals.proteinMin.toFixed(1)}-{goals.proteinMax.toFixed(1)} <span className="text-xs font-normal opacity-50">g</span></p>
+                    <div className="text-right">
+                      <p className="text-2xl font-black">{goals.proteinMin.toFixed(1)}-{goals.proteinMax.toFixed(1)} <span className="text-xs font-normal opacity-50">g</span></p>
+                      <p className="text-[10px] font-bold text-blue-400">{((currentEnIntake.protein / goals.proteinMax) * 100).toFixed(1)}% of max</p>
+                    </div>
                   </div>
                   <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                     <div 
@@ -352,17 +366,17 @@ export default function NutritionGoals() {
                 </div>
 
                 <div className="pt-6 border-t border-white/10">
-                  <p className="text-xs font-bold uppercase opacity-50 mb-4">PN Requirement (The Gap)</p>
+                  <p className="text-xs font-bold uppercase opacity-50 mb-4">PN Requirement</p>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-                      <p className="text-[10px] font-bold opacity-50 uppercase mb-1">Kcal Gap</p>
-                      <p className="text-xl font-black text-emerald-400">{gap.kcal.toFixed(0)}</p>
-                      <p className="text-[10px] opacity-40 font-bold">{(gap.kcal / (w || 1)).toFixed(1)} kcal/kg</p>
+                    <div className="bg-emerald-400/10 p-4 rounded-2xl border border-emerald-400/20 shadow-lg shadow-emerald-900/20">
+                      <p className="text-[10px] font-bold text-emerald-400 uppercase mb-1 tracking-wider">PN Kcal Required</p>
+                      <p className="text-2xl font-black text-emerald-400">{gap.kcal.toFixed(0)}</p>
+                      <p className="text-[10px] text-emerald-400/60 font-bold">{(gap.kcal / (w || 1)).toFixed(1)} kcal/kg</p>
                     </div>
-                    <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-                      <p className="text-[10px] font-bold opacity-50 uppercase mb-1">Protein Gap</p>
-                      <p className="text-xl font-black text-blue-400">{gap.protein.toFixed(1)}g</p>
-                      <p className="text-[10px] opacity-40 font-bold">{(gap.protein / (w || 1)).toFixed(2)} g/kg</p>
+                    <div className="bg-blue-400/10 p-4 rounded-2xl border border-blue-400/20 shadow-lg shadow-blue-900/20">
+                      <p className="text-[10px] font-bold text-blue-400 uppercase mb-1 tracking-wider">PN Protein Required</p>
+                      <p className="text-2xl font-black text-blue-400">{gap.protein.toFixed(1)}g</p>
+                      <p className="text-[10px] text-blue-400/60 font-bold">{(gap.protein / (w || 1)).toFixed(2)} g/kg</p>
                     </div>
                   </div>
                 </div>
@@ -404,6 +418,15 @@ export default function NutritionGoals() {
               </ul>
             </div>
           </div>
+        </div>
+
+        {/* Standardized Disclaimer */}
+        <div className="mt-12 text-[10px] sm:text-xs text-slate-500 text-center border-t border-slate-200 pt-8">
+          <p className="font-bold mb-2 uppercase tracking-wider">Disclaimer</p>
+          <p className="max-w-2xl mx-auto leading-relaxed">
+            All final decisions must be made via multidisciplinary discussion. This calculator is for reference only. 
+            Clinical judgment should always supersede calculated values.
+          </p>
         </div>
       </div>
     </div>

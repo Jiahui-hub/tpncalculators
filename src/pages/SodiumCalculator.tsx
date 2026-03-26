@@ -40,6 +40,11 @@ export default function SodiumCalculator() {
   const simCorrectionPerHour = hours > 0 ? Math.abs(simTotalCorrection) / hours : 0;
 
   const isSimDangerous = Math.abs(simTotalCorrection) > 12 || simCorrectionPerHour > 0.5;
+  
+  // Fluid overload check (25-30 ml/kg/day)
+  const dailyFluidLimit = weight * 30;
+  const simDailyVolume = hours > 0 ? (simVolumeL * 24) / hours : 0;
+  const isFluidOverload = simDailyVolume > dailyFluidLimit;
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
@@ -184,7 +189,7 @@ export default function SodiumCalculator() {
               <div>
                 <label className="block text-xs font-bold text-indigo-700 uppercase tracking-wider mb-2">Number of Pints (500mL)</label>
                 <div className="flex flex-wrap gap-2">
-                  {[1, 2, 3, 4, 5, 6].map((p) => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
                     <button
                       key={p}
                       onClick={() => setPints(p)}
@@ -212,7 +217,7 @@ export default function SodiumCalculator() {
               </div>
             </div>
 
-            <div className={`p-4 rounded-xl border transition-colors ${isSimDangerous ? "bg-red-100 border-red-200" : "bg-white border-indigo-100"}`}>
+            <div className={`p-4 rounded-xl border transition-colors ${isSimDangerous || isFluidOverload ? "bg-red-100 border-red-200" : "bg-white border-indigo-100"}`}>
               <div className="grid grid-cols-2 gap-4 text-center">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase font-bold">Total Na⁺ Change</p>
@@ -222,20 +227,36 @@ export default function SodiumCalculator() {
                 </div>
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase font-bold">Infusion Rate</p>
-                  <p className="text-2xl font-black text-indigo-900">
+                  <p className={`text-2xl font-black ${simRate > 150 ? "text-orange-600" : "text-indigo-900"}`}>
                     {simRate.toFixed(0)} <span className="text-sm font-bold">mL/hr</span>
                   </p>
                 </div>
               </div>
               
-              {isSimDangerous && (
-                <div className="mt-3 pt-3 border-t border-red-200 text-red-800 text-xs font-bold flex items-start gap-2">
-                  <span>⚠</span>
-                  <span>
-                    {Math.abs(simTotalCorrection) > 12 
-                      ? "EXCEEDS 12 mmol/L LIMIT! Risk of osmotic demyelination or cerebral edema." 
-                      : "CORRECTION RATE TOO FAST! (>0.5 mmol/L/hr). Consider increasing duration."}
-                  </span>
+              {(isSimDangerous || isFluidOverload || simRate > 150) && (
+                <div className="mt-3 pt-3 border-t border-red-200 text-red-800 text-xs font-bold space-y-2">
+                  {isSimDangerous && (
+                    <div className="flex items-start gap-2">
+                      <span>⚠️</span>
+                      <span>
+                        {Math.abs(simTotalCorrection) > 12 
+                          ? "EXCEEDS 12 mmol/L LIMIT! Risk of osmotic demyelination or cerebral edema." 
+                          : "CORRECTION RATE TOO FAST! (>0.5 mmol/L/hr). Consider increasing duration."}
+                      </span>
+                    </div>
+                  )}
+                  {isFluidOverload && (
+                    <div className="flex items-start gap-2 text-orange-700">
+                      <span>⚠️</span>
+                      <span>FLUID OVERLOAD RISK! Projected daily intake ({simDailyVolume.toFixed(0)} mL) exceeds 35 mL/kg/day.</span>
+                    </div>
+                  )}
+                  {simRate > 150 && (
+                    <div className="flex items-start gap-2 text-orange-700">
+                      <span>⚠️</span>
+                      <span>HIGH INFUSION RATE! Exercise caution with rates &gt; 150 mL/hr in non-resuscitation settings.</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -256,8 +277,10 @@ export default function SodiumCalculator() {
           {/* Standardized References */}
           <div className="mt-8 text-xs text-slate-500 border-t pt-6">
             <h2 className="font-bold text-sm text-gray-700 mb-2">References</h2>
-            <p className="mb-1">Adrogué HJ, Madias NE. Hyponatremia. New England Journal of Medicine. 2000.</p>
-            <p>European Clinical Practice Guideline on Hyponatremia (2014).</p>
+            <ul className="list-disc ml-5 space-y-1">
+              <li>Adrogué HJ, Madias NE. Hyponatremia. New England Journal of Medicine. 2000.</li>
+              <li>European Clinical Practice Guideline on Hyponatremia (2014).</li>
+            </ul>
           </div>
 
           {/* Standardized Disclaimer */}

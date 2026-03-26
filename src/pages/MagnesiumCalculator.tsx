@@ -113,11 +113,11 @@ export default function MagnesiumCalculator() {
               <div className="space-y-3 text-sm">
                 <p className="font-bold text-gray-700">Mild hypomagnesaemia:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>IM: 1g (4 mmol) every 6 hours for 4 doses, or 250 mg/kg may be given within a period of 4 hours if necessary.</li>
+                  <li>IM: 1g (4 mmol) every 6 hours for 4 doses.</li>
                 </ul>
                 <p className="font-bold text-gray-700 mt-2">Severe hypomagnesaemia:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>IM: 0.25 g/kg over 4 hours.</li>
+                  <li>IM: 250 mg/kg may be given within a period of 4 hours.</li>
                   <li>IV infusion: 5g added in 1L of NS/D5 over 3–4 hours.</li>
                 </ul>
                 <p className="font-bold text-gray-700 mt-2">Total Daily Dose:</p>
@@ -147,7 +147,11 @@ export default function MagnesiumCalculator() {
           {/* Standardized References */}
           <div className="mt-8 text-xs text-slate-500 border-t pt-6">
             <h2 className="font-bold text-sm text-gray-700 mb-2">References</h2>
-            <p>Chan, P. D., & Winkle, C. R. (2015). Current clinical strategies: Internal medicine (2015 ed.). Current Clinical Strategies Publishing.</p>
+            <ul className="list-disc ml-5 space-y-1">
+              <li>Chan, P. D., & Winkle, C. R. (2015). Current clinical strategies: Internal medicine (2015 ed.). Current Clinical Strategies Publishing.</li>
+              <li>Dilution of High-Alert Medications (2011) from Ministry of Higher Education.</li>
+              <li>Product information of Magnesium Sulphate 50% injection (Pharmaniaga).</li>
+            </ul>
           </div>
 
           {/* Standardized Disclaimer */}

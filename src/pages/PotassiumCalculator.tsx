@@ -198,7 +198,11 @@ export default function PotassiumCalculator() {
           {/* Standardized References */}
           <div className="mt-8 text-xs text-slate-500 border-t pt-6">
             <h2 className="font-bold text-sm text-gray-700 mb-2">References</h2>
-            <p>Alldredge B.K., Corelli R.L., Ernst M.E., Guglielmo B.J., Jacobson P.A., Kradjan W.A. Koda-Kimble and Young’s Applied Therapeutics. 10th ed. Lippincott; 2013.</p>
+            <ul className="list-disc ml-5 space-y-1">
+              <li>Alldredge B.K., Corelli R.L., Ernst M.E., Guglielmo B.J., Jacobson P.A., Kradjan W.A. Koda-Kimble and Young’s Applied Therapeutics. 10th ed. Lippincott; 2013.</li>
+              <li>Dilution of High-Alert Medications (2011) from Ministry of Higher Education.</li>
+              <li>Product leaflet of Injecsol K10.</li>
+            </ul>
           </div>
 
           {/* Standardized Disclaimer */}
