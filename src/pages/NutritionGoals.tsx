@@ -82,11 +82,11 @@ export default function NutritionGoals() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (sessionStorage.getItem("pharmacistMode") !== "true") {
+    if (localStorage.getItem("pharmacistMode") !== "true") {
       navigate("/");
     }
   }, [navigate]);
-  
+
   const [weight, setWeight] = useState<number | "">(70);
   const [stateKey, setStateKey] = useState("postOp");
   

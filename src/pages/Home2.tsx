@@ -4,7 +4,7 @@ import { FiLock, FiUnlock, FiX } from "react-icons/fi";
 
 export default function Home() {
   const navigate = useNavigate();
-  const [isPharmacistMode, setIsPharmacistMode] = useState(sessionStorage.getItem("pharmacistMode") === "true");
+  const [isPharmacistMode, setIsPharmacistMode] = useState(localStorage.getItem("pharmacistMode") === "true");
   const [showPasscodeModal, setShowPasscodeModal] = useState(false);
   const [passcode, setPasscode] = useState("");
   const [pendingRoute, setPendingRoute] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export default function Home() {
     e.preventDefault();
     if (passcode === "4869") {
       setIsPharmacistMode(true);
-      sessionStorage.setItem("pharmacistMode", "true");
+      localStorage.setItem("pharmacistMode", "true");
       setShowPasscodeModal(false);
       setPasscode("");
       setError("");

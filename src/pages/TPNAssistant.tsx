@@ -26,12 +26,12 @@ const CONVENIENCE_BAGS: Bag[] = [
 export default function TPNAssistant() {
   const navigate = useNavigate();
 
-   useEffect(() => {
-    if (sessionStorage.getItem("pharmacistMode") !== "true") {
+  useEffect(() => {
+    if (localStorage.getItem("pharmacistMode") !== "true") {
       navigate("/");
     }
   }, [navigate]);
-  
+
   const [selectedBagIndex, setSelectedBagIndex] = useState(0);
   const [addedNa, setAddedNa] = useState(0);
   const [addedK, setAddedK] = useState(0);
@@ -92,6 +92,12 @@ export default function TPNAssistant() {
   const caConc = totalCa / (totalVolume / 1000);
   const po4Conc = totalPO4 / (totalVolume / 1000);
 
+  // Ca-PO4 Solubility Check (Simplified clinical rule: Ca + PO4 < 30-45 mmol/L depending on AA concentration)
+  // We'll use a conservative 30 mmol/L threshold for warning
+  const caConcentration = totalCa / (totalVolume / 1000);
+  const po4Concentration = totalPO4 / (totalVolume / 1000);
+  const sumConcentration = caConcentration + po4Concentration;
+
   const nutriflexAlerts = useMemo(() => {
     if (!isNutriflex) return [];
     const alerts = [];
@@ -104,52 +110,24 @@ export default function TPNAssistant() {
         : null;
 
     if (limits) {
-      if ((addedNa + addedK) > limits.naK) {
-        alerts.push({
-          level: 1,
-          title: "MAX Na + K ADDITION EXCEEDED",
-          details: `Total Na+K added: ${addedNa + addedK} mmol. Manufacturer Limit: ${limits.naK} mmol.`,
-          action: "Reduce Sodium or Potassium top-up."
-        });
-      }
-      if (addedCa > limits.ca) {
-        alerts.push({
-          level: 2,
-          title: "MAX CALCIUM ADDITION EXCEEDED",
-          details: `Calcium added: ${addedCa} mmol. Manufacturer Limit: ${limits.ca} mmol.`,
-          action: "Reduce Calcium top-up to maintain stability."
-        });
-      }
-      if (addedMg > limits.mg) {
-        alerts.push({
-          level: 1,
-          title: "MAX MAGNESIUM ADDITION EXCEEDED",
-          details: `Magnesium added: ${addedMg} mmol. Manufacturer Limit: ${limits.mg} mmol.`,
-          action: "Reduce Magnesium top-up."
-        });
-      }
-      if (addedPO4 > limits.po4) {
-        alerts.push({
-          level: 2,
-          title: "MAX PHOSPHATE ADDITION EXCEEDED",
-          details: `Phosphate added: ${addedPO4} mmol. Manufacturer Limit: ${limits.po4} mmol.`,
-          action: "Reduce Phosphate top-up."
-        });
-      }
-    }
+      const isExceeded = 
+        (addedNa + addedK) > limits.naK || 
+        addedCa > limits.ca || 
+        addedMg > limits.mg || 
+        addedPO4 > limits.po4;
 
-    // Secondary concentration-based safety checks
-    if (po4Conc > 20 && !limits) {
-      alerts.push({
-        level: 1,
-        title: "WARNING: PHOSPHATE STABILITY",
-        details: `Concentration: ${po4Conc.toFixed(1)} mmol/L. Limit: 20 mmol/L.`,
-        action: "Reduce Phosphate."
-      });
+      if (isExceeded) {
+        alerts.push({
+          level: 1, // Amber
+          title: "Manufacturer Limit Exceeded",
+          details: "One or more electrolyte additions exceed manufacturer-validated stability limits.",
+          action: "Acceptable for same-day use (<24h) per clinical practice."
+        });
+      }
     }
 
     return alerts;
-  }, [isNutriflex, currentBag.volume, addedNa, addedK, addedMg, addedCa, addedPO4, po4Conc]);
+  }, [isNutriflex, currentBag.volume, addedNa, addedK, addedMg, addedCa, addedPO4]);
 
   // NPC:N Calculations
   const macronutrients = useMemo(() => {
@@ -163,13 +141,6 @@ export default function TPNAssistant() {
 
     return { glucose, aa, lipid, npc, nitrogen, ratio };
   }, [isManual, currentBag, manualDextroseVol, manualAAVol, manualLipidVol, glutamineVolume]);
-  
-  // Ca-PO4 Solubility Check (Simplified clinical rule: Ca + PO4 < 30-45 mmol/L depending on AA concentration)
-  // We'll use a conservative 30 mmol/L threshold for warning
-  const caConcentration = totalCa / (totalVolume / 1000);
-  const po4Concentration = totalPO4 / (totalVolume / 1000);
-  const sumConcentration = caConcentration + po4Concentration;
-  const isPrecipitationRisk = sumConcentration > 30;
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
@@ -333,42 +304,53 @@ export default function TPNAssistant() {
               <div>
                 <p className="text-xs uppercase font-bold opacity-70 mb-3">Compatibility Check</p>
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Total Ca + PO₄</span>
-                    <span className={`font-bold ${isPrecipitationRisk ? "text-red-300" : "text-emerald-300"}`}>
-                      {sumConcentration.toFixed(1)} mmol/L
-                    </span>
-                  </div>
-
-                  {isNutriflex && nutriflexAlerts.length > 0 && (
-                    <div className="space-y-3">
-                      {nutriflexAlerts.map((alert, idx) => (
-                        <div key={idx} className="bg-red-500/30 p-3 rounded-lg border border-red-400/50 text-[10px] leading-relaxed space-y-1">
-                          <p className="font-black text-red-200 flex items-center gap-1">
-                            <FiAlertTriangle /> {alert.title}
-                          </p>
-                          <p className="opacity-90">{alert.details}</p>
-                          <p className="font-bold text-white mt-1 underline">Action: {alert.action}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {!isNutriflex && isPrecipitationRisk ? (
-                    <div className="bg-red-500/20 p-3 rounded-lg border border-red-500/30 flex gap-3 text-xs leading-relaxed">
-                      <div className="shrink-0 text-red-300 text-lg">
-                        <FiAlertTriangle />
+                  {isNutriflex ? (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Total Ca + PO₄</span>
+                        <span className={`font-bold ${nutriflexAlerts.length > 0 ? "text-red-300" : "text-emerald-300"}`}>
+                          {sumConcentration.toFixed(1)} mmol/L
+                        </span>
                       </div>
-                      <p><b>PRECIPITATION RISK!</b> The combined concentration of Calcium and Phosphate exceeds safe limits (30 mmol/L). Risk of crystal formation.</p>
-                    </div>
-                  ) : !isNutriflex ? (
+
+                      {nutriflexAlerts.length > 0 ? (
+                        <div className="space-y-3">
+                          {nutriflexAlerts.map((alert, idx) => (
+                            <div 
+                              key={idx} 
+                              className={`p-3 rounded-lg border text-[10px] leading-relaxed space-y-1 ${
+                                alert.level === 2 
+                                  ? "bg-red-500/30 border-red-400/50" 
+                                  : "bg-amber-500/20 border-amber-400/50"
+                              }`}
+                            >
+                              <p className={`font-black flex items-center gap-1 ${
+                                alert.level === 2 ? "text-red-200" : "text-amber-200"
+                              }`}>
+                                <FiAlertTriangle /> {alert.title}
+                              </p>
+                              <p className="opacity-90">{alert.details}</p>
+                              <p className="font-bold text-white mt-1 underline">Action: {alert.action}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-emerald-500/20 p-3 rounded-lg border border-emerald-500/30 flex gap-3 text-xs leading-relaxed">
+                          <div className="shrink-0 text-emerald-300 text-lg">
+                            <FiCheckCircle />
+                          </div>
+                          <p>Nutriflex additive concentrations are within manufacturer-validated stability limits.</p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
                     <div className="bg-emerald-500/20 p-3 rounded-lg border border-emerald-500/30 flex gap-3 text-xs leading-relaxed">
                       <div className="shrink-0 text-emerald-300 text-lg">
                         <FiCheckCircle />
                       </div>
-                      <p>Organic phosphate used in this bag is generally compatible with standard calcium concentrations.</p>
+                      <p>Organic phosphate (Glycophos) used in this bag is generally compatible with standard calcium concentrations.</p>
                     </div>
-                  ) : null}
+                  )}
                 </div>
               </div>
             </div>
@@ -486,10 +468,12 @@ export default function TPNAssistant() {
         </div>
 
         <div className="mt-12 p-6 bg-slate-50 rounded-2xl border border-slate-200">
-          <h4 className="text-sm font-bold text-slate-800 mb-3">Sterile Unit Notes</h4>
-          <ul className="text-xs text-slate-600 space-y-2 list-disc ml-4">
+          <h4 className="text-sm font-bold text-slate-800 mb-3">Clinical Practice Notes</h4>
+          <ul className="text-xs text-slate-600 space-y-3 list-disc ml-4">
+            <li><b>Stability vs. Safety:</b> Manufacturer limits (e.g., 1.4 mmol Ca for Nutriflex 625mL) are conservative to guarantee 7-9 days of shelf life. In clinical practice, higher additions are common for same-day use (&lt;24h) provided proper mixing and monitoring occur.</li>
+            <li><b>Precipitation Risk:</b> The risk of Ca-PO₄ precipitation increases with higher temperatures, higher pH, and lower amino acid concentrations.</li>
+            <li><b>Mixing Order:</b> Always add Phosphate first, mix the bag thoroughly, and add Calcium last to minimize local high concentrations that trigger precipitation.</li>
             <li><b>Osmolarity:</b> Peripheral lines are generally limited to &lt;900 mOsm/L. Central lines can handle &gt;900 mOsm/L.</li>
-            <li><b>Compatibility:</b> Ca-PO₄ solubility is complex and depends on pH, temperature, and Amino Acid concentration. This tool uses a conservative 30 mmol/L sum threshold for most bags, with specific manufacturer limits for Nutriflex.</li>
           </ul>
         </div>
       </div>
