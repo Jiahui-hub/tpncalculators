@@ -108,7 +108,7 @@ export default function Home() {
                 </div>
               )}
             </div>
-            <h2 className="mb-1 text-slate-900 text-lg font-bold">{item.title}</h2>
+            <h2 className="mb-1 text-slate-900 text-lg font-bold text-center">{item.title}</h2>
             <p className="m-0 text-slate-500 text-center text-xs font-medium">{item.description}</p>
             {item.protected && !isPharmacistMode && (
               <span className="mt-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Pharmacist Mode Required</span>
