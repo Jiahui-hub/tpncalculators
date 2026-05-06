@@ -531,39 +531,6 @@ function MUSTTool() {
   );
 }
 
-function PhenotypicSection({ title, description, value, options, onChange }: { 
-  title: string; 
-  description: string; 
-  value: string; 
-  options: { label: string; value: string; subtitle?: string }[];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="px-2">
-        <p className="text-base font-black text-slate-800 tracking-tight">{title}</p>
-        <p className="text-sm font-medium text-slate-500 leading-tight">{description}</p>
-      </div>
-      <div className="flex gap-3">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={`flex-1 p-4 rounded-2xl border text-sm font-black transition-all ${
-              value === opt.value
-                ? "bg-indigo-600 border-indigo-700 text-white shadow-lg shadow-indigo-100 ring-2 ring-indigo-200"
-                : "bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:bg-slate-50"
-            }`}
-          >
-            {opt.label}
-            {opt.subtitle && <span className="block opacity-80 font-bold mt-2 text-xs leading-tight">{opt.subtitle}</span>}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function CriteriaCard({ active, onToggle, title, details }: { active: boolean; onToggle: () => void; title: string, details: string }) {
   return (
     <button

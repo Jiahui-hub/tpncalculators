@@ -516,7 +516,7 @@ function AdditiveInput({ label, value, onChange, color }: { label: string, value
           onClick={() => onChange(value + 1)}
           className="w-8 h-8 flex items-center justify-center rounded bg-white border border-slate-200 hover:bg-slate-100"
         >
-          +
+          <FiPlus />
         </button>
       </div>
     </div>
