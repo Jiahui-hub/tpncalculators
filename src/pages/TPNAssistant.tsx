@@ -33,6 +33,9 @@ export default function TPNAssistant() {
   }, [navigate]);
 
   const [selectedBagIndex, setSelectedBagIndex] = useState(0);
+  const [patientWeight, setPatientWeight] = useState(70);
+  const [patientHeight, setPatientHeight] = useState(170);
+  const [patientAge, setPatientAge] = useState(60);
   const [addedNa, setAddedNa] = useState(0);
   const [addedK, setAddedK] = useState(0);
   const [addedMg, setAddedMg] = useState(0);
@@ -63,19 +66,11 @@ export default function TPNAssistant() {
   const finalOsmolarity = useMemo(() => {
     let baseOsmTotal = 0;
     if (isManual) {
-      // Dextrose 50%: 2.525 mOsm/mL
-      // Aminoven 10%: 1.0 mOsm/mL
-      // SMOFlipid 20%: 0.38 mOsm/mL
       baseOsmTotal = (manualDextroseVol * 2.525) + (manualAAVol * 1.0) + (manualLipidVol * 0.38);
     } else {
       baseOsmTotal = currentBag.osmolarity * (currentBag.volume / 1000);
     }
     
-    // Additive Osmolarity Contributions:
-    // Na (2), K (2), Mg (1), Ca (1), PO4 (1)
-    // Addaven: ~31 mOsm per 10mL
-    // Vitamins: ~10 mOsm total
-    // Glutamine (Dipeptiven 20%): ~921 mOsm/L -> 0.921 mOsm/mL
     const additiveOsmTotal = 
       (addedNa * 2 + addedK * 2 + addedMg + addedCa + addedPO4) +
       (hasAddaven ? 31 : 0) +
@@ -89,11 +84,6 @@ export default function TPNAssistant() {
   const totalPO4 = currentBag.basePO4 + addedPO4;
 
   const isNutriflex = currentBag.name.includes("Nutriflex");
-  const caConc = totalCa / (totalVolume / 1000);
-  const po4Conc = totalPO4 / (totalVolume / 1000);
-
-  // Ca-PO4 Solubility Check (Simplified clinical rule: Ca + PO4 < 30-45 mmol/L depending on AA concentration)
-  // We'll use a conservative 30 mmol/L threshold for warning
   const caConcentration = totalCa / (totalVolume / 1000);
   const po4Concentration = totalPO4 / (totalVolume / 1000);
   const sumConcentration = caConcentration + po4Concentration;
@@ -102,7 +92,6 @@ export default function TPNAssistant() {
     if (!isNutriflex) return [];
     const alerts = [];
 
-    // Specific manufacturer limits from photo for Nutriflex Omega Special
     const limits = currentBag.volume === 625 
       ? { naK: 68, ca: 1.4, mg: 3.4, po4: 18.8 }
       : currentBag.volume === 1250 
@@ -118,7 +107,7 @@ export default function TPNAssistant() {
 
       if (isExceeded) {
         alerts.push({
-          level: 1, // Amber
+          level: 1, 
           title: "Manufacturer Limit Exceeded",
           details: "One or more electrolyte additions exceed manufacturer-validated stability limits.",
           action: "Acceptable for same-day use (<24h) per clinical practice."
@@ -129,10 +118,9 @@ export default function TPNAssistant() {
     return alerts;
   }, [isNutriflex, currentBag.volume, addedNa, addedK, addedMg, addedCa, addedPO4]);
 
-  // NPC:N Calculations
   const macronutrients = useMemo(() => {
     const glucose = isManual ? (manualDextroseVol * 0.5) : currentBag.glucoseGrams;
-    const aa = (isManual ? (manualAAVol * 0.1) : currentBag.aaGrams) + (glutamineVolume * 0.2); // Dipeptiven is 20%
+    const aa = (isManual ? (manualAAVol * 0.1) : currentBag.aaGrams) + (glutamineVolume * 0.2);
     const lipid = isManual ? (manualLipidVol * 0.2) : currentBag.lipidGrams;
     
     const npc = (glucose * 4) + (lipid * 9);
@@ -153,13 +141,45 @@ export default function TPNAssistant() {
         </button>
 
         <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">TPN Assistant</h1>
-        <p className="text-center text-gray-500 mb-8">Osmolarity & Compatibility Check</p>
+        <p className="text-center text-gray-500 mb-8 font-medium">Clinical Compounding</p>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column: Configuration */}
           <div className="space-y-6">
             <section className="bg-slate-50 p-5 rounded-xl border border-slate-200">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-4">1. Select Base Bag</h2>
+              <h2 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-4">1. Patient Metrics</h2>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Weight (kg)</label>
+                  <input 
+                    type="number" 
+                    className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                    value={patientWeight === 0 ? "" : patientWeight}
+                    onChange={(e) => setPatientWeight(e.target.value === "" ? 0 : Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Height (cm)</label>
+                  <input 
+                    type="number" 
+                    className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                    value={patientHeight === 0 ? "" : patientHeight}
+                    onChange={(e) => setPatientHeight(e.target.value === "" ? 0 : Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Age (yr)</label>
+                  <input 
+                    type="number" 
+                    className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                    value={patientAge === 0 ? "" : patientAge}
+                    onChange={(e) => setPatientAge(e.target.value === "" ? 0 : Number(e.target.value))}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-slate-50 p-5 rounded-xl border border-slate-200">
+              <h2 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-4">2. Select Base Bag</h2>
               <select 
                 className="w-full p-3 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
                 value={selectedBagIndex}
@@ -224,7 +244,7 @@ export default function TPNAssistant() {
             </section>
 
             <section className="bg-slate-50 p-5 rounded-xl border border-slate-200">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-4">2. Additives (Top-ups)</h2>
+              <h2 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-4">3. Additives (Top-ups)</h2>
               <div className="space-y-4">
                 <AdditiveInput label="Sodium (mmol)" value={addedNa} onChange={setAddedNa} color="blue" />
                 <AdditiveInput label="Potassium (mmol)" value={addedK} onChange={setAddedK} color="indigo" />
@@ -244,7 +264,7 @@ export default function TPNAssistant() {
             </section>
 
             <section className="bg-slate-50 p-5 rounded-xl border border-slate-200">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-4">3. Other Additives</h2>
+              <h2 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-4">4. Other Additives</h2>
               <div className="space-y-3">
                 <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50 transition">
                   <input type="checkbox" checked={hasAddaven} onChange={(e) => setHasAddaven(e.target.checked)} className="w-4 h-4 text-indigo-600" />
@@ -284,105 +304,117 @@ export default function TPNAssistant() {
             </section>
           </div>
 
-          {/* Right Column: Results */}
           <div className="space-y-6">
-            <div className="bg-indigo-900 text-white p-6 rounded-2xl shadow-lg space-y-6">
-              <div>
-                <p className="text-xs uppercase font-bold opacity-70 mb-1">Final Osmolarity</p>
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-4xl font-black">{Math.round(finalOsmolarity)}</h3>
-                  <span className="text-sm font-medium opacity-70">mOsm/L</span>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-lg space-y-6">
+              <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest text-center">Nutritional Delivery (Per Kg)</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-center">
+                  <p className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Energy</p>
+                  <p className="text-2xl font-black text-indigo-900">
+                    {patientWeight > 0 ? (macronutrients.npc / patientWeight).toFixed(1) : "0"}
+                    <span className="text-xs ml-1">kcal/kg</span>
+                  </p>
                 </div>
-                <div className={`mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${finalOsmolarity > 900 ? "bg-red-500/20 text-red-200" : "bg-emerald-500/20 text-emerald-200"}`}>
-                  {finalOsmolarity > 900 ? <FiAlertTriangle /> : <FiCheckCircle />}
-                  {finalOsmolarity > 900 ? "CENTRAL LINE ONLY" : "PERIPHERAL SAFE"}
+                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-center">
+                  <p className="text-[10px] font-bold text-emerald-400 uppercase mb-1">Protein</p>
+                  <p className="text-2xl font-black text-emerald-900">
+                    {patientWeight > 0 ? (macronutrients.aa / patientWeight).toFixed(1) : "0"}
+                    <span className="text-xs ml-1">g/kg</span>
+                  </p>
+                </div>
+                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 text-center">
+                  <p className="text-[10px] font-bold text-amber-400 uppercase mb-1">Carbs</p>
+                  <p className="text-2xl font-black text-amber-900">
+                    {patientWeight > 0 ? (macronutrients.glucose / patientWeight).toFixed(1) : "0"}
+                    <span className="text-xs ml-1">g/kg</span>
+                  </p>
+                </div>
+                <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 text-center">
+                  <p className="text-[10px] font-bold text-rose-400 uppercase mb-1">Fat</p>
+                  <p className="text-2xl font-black text-rose-900">
+                    {patientWeight > 0 ? (macronutrients.lipid / patientWeight).toFixed(1) : "0"}
+                    <span className="text-xs ml-1">g/kg</span>
+                  </p>
                 </div>
               </div>
 
-              <div className="h-px bg-white/10" />
-
-              <div>
-                <p className="text-xs uppercase font-bold opacity-70 mb-3">Compatibility Check</p>
-                <div className="space-y-4">
-                  {isNutriflex ? (
-                    <>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Total Ca + PO₄</span>
-                        <span className={`font-bold ${nutriflexAlerts.length > 0 ? "text-red-300" : "text-emerald-300"}`}>
-                          {sumConcentration.toFixed(1)} mmol/L
-                        </span>
+              <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-inner space-y-6">
+                <div>
+                  <p className="text-[10px] uppercase font-bold opacity-70 mb-3">Safety & Stability</p>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold opacity-60">OSMOLARITY</span>
+                        <span className="text-xl font-black">{Math.round(finalOsmolarity)} <span className="text-[10px] font-medium opacity-50">mOsm/L</span></span>
                       </div>
+                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold ${finalOsmolarity > 900 ? "bg-red-500 text-white" : "bg-emerald-500 text-white"}`}>
+                        {finalOsmolarity > 900 ? <FiAlertTriangle /> : <FiCheckCircle />}
+                        {finalOsmolarity > 900 ? "CENTRAL" : "PERIPHERAL"}
+                      </div>
+                    </div>
 
-                      {nutriflexAlerts.length > 0 ? (
-                        <div className="space-y-3">
-                          {nutriflexAlerts.map((alert, idx) => (
-                            <div 
-                              key={idx} 
-                              className={`p-3 rounded-lg border text-[10px] leading-relaxed space-y-1 ${
-                                alert.level === 2 
-                                  ? "bg-red-500/30 border-red-400/50" 
-                                  : "bg-amber-500/20 border-amber-400/50"
-                              }`}
-                            >
-                              <p className={`font-black flex items-center gap-1 ${
-                                alert.level === 2 ? "text-red-200" : "text-amber-200"
-                              }`}>
-                                <FiAlertTriangle /> {alert.title}
-                              </p>
-                              <p className="opacity-90">{alert.details}</p>
-                              <p className="font-bold text-white mt-1 underline">Action: {alert.action}</p>
+                    <div className="pt-2 border-t border-white/10 space-y-4">
+                      {isNutriflex ? (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm">Total Ca + PO₄</span>
+                            <span className={`font-bold ${nutriflexAlerts.length > 0 ? "text-red-300" : "text-emerald-300"}`}>
+                              {sumConcentration.toFixed(1)} mmol/L
+                            </span>
+                          </div>
+
+                          {nutriflexAlerts.length > 0 ? (
+                            <div className="space-y-3">
+                              {nutriflexAlerts.map((alert, idx) => (
+                                <div key={idx} className="p-3 rounded-lg border border-amber-400/50 bg-amber-500/20 text-[10px] leading-relaxed space-y-1">
+                                  <p className="font-black flex items-center gap-1 text-amber-200">
+                                    <FiAlertTriangle /> {alert.title}
+                                  </p>
+                                  <p className="opacity-90">{alert.details}</p>
+                                  <p className="font-bold text-white mt-1 underline">Action: {alert.action}</p>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          ) : (
+                            <div className="bg-emerald-500/20 p-3 rounded-lg border border-emerald-500/30 flex gap-3 text-xs leading-relaxed">
+                              <div className="shrink-0 text-emerald-300 text-lg">
+                                <FiCheckCircle />
+                              </div>
+                              <p>Nutriflex additive concentrations are within manufacturer limits.</p>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="bg-emerald-500/20 p-3 rounded-lg border border-emerald-500/30 flex gap-3 text-xs leading-relaxed">
                           <div className="shrink-0 text-emerald-300 text-lg">
                             <FiCheckCircle />
                           </div>
-                          <p>Nutriflex additive concentrations are within manufacturer-validated stability limits.</p>
+                          <p>Organic phosphate (Glycophos) used is generally compatible.</p>
                         </div>
                       )}
-                    </>
-                  ) : (
-                    <div className="bg-emerald-500/20 p-3 rounded-lg border border-emerald-500/30 flex gap-3 text-xs leading-relaxed">
-                      <div className="shrink-0 text-emerald-300 text-lg">
-                        <FiCheckCircle />
-                      </div>
-                      <p>Organic phosphate (Glycophos) used in this bag is generally compatible with standard calcium concentrations.</p>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-4">
-              <h3 className="text-xs font-bold uppercase text-slate-500">Compounding Summary</h3>
+              <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest pl-1">Clinical Summary</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Total Volume:</span>
-                  <span className="font-bold">{totalVolume} mL</span>
+                <div className="flex justify-between p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+                  <span className="text-indigo-600 font-bold">Total Fluid Intake:</span>
+                  <span className="font-black text-indigo-700">{totalVolume} mL</span>
                 </div>
-                {isManual && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Glucose (D50):</span>
-                      <span className="font-bold">{(manualDextroseVol * 0.5).toFixed(1)} g</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Amino Acids (10%):</span>
-                      <span className="font-bold">{(manualAAVol * 0.1).toFixed(1)} g</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Lipids (20%):</span>
-                      <span className="font-bold">{(manualLipidVol * 0.2).toFixed(1)} g</span>
-                    </div>
-                  </>
-                )}
-                <div className="flex justify-between">
+                <div className="flex justify-between px-2">
+                  <span className="text-slate-500">Fluid per weight:</span>
+                  <span className="font-bold">{patientWeight > 0 ? (totalVolume / patientWeight).toFixed(1) : "0"} mL/kg</span>
+                </div>
+                <div className="flex justify-between px-2">
                   <span className="text-slate-500">Total Calcium:</span>
                   <span className="font-bold">{totalCa.toFixed(1)} mmol</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between px-2">
                   <span className="text-slate-500">Total Phosphate:</span>
                   <span className="font-bold">{totalPO4.toFixed(1)} mmol</span>
                 </div>
@@ -404,24 +436,6 @@ export default function TPNAssistant() {
                   <span className="text-slate-500">Total Nitrogen:</span>
                   <span className="font-bold text-slate-700">{macronutrients.nitrogen.toFixed(1)} g</span>
                 </div>
-                
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Clinical Target Guide</p>
-                  <div className="grid grid-cols-3 gap-1 text-[9px] font-bold text-center">
-                    <div className={`p-1.5 rounded ${macronutrients.ratio >= 80 && macronutrients.ratio < 100 ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400"}`}>
-                      80-100:1
-                      <br/>Severe Stress
-                    </div>
-                    <div className={`p-1.5 rounded ${macronutrients.ratio >= 100 && macronutrients.ratio < 130 ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400"}`}>
-                      100-130:1
-                      <br/>Mod. Stress
-                    </div>
-                    <div className={`p-1.5 rounded ${macronutrients.ratio >= 130 ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400"}`}>
-                      150:1
-                      <br/>Stable
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -430,38 +444,29 @@ export default function TPNAssistant() {
                 <h3 className="text-xs font-bold uppercase text-slate-500">Flow Rate</h3>
                 <span className="text-lg font-black text-indigo-600">{(totalVolume / infusionHours).toFixed(1)} mL/hr</span>
               </div>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-500">Infusion Duration:</span>
-                  <div className="flex gap-1">
-                    {[24, 16, 12].map((h) => (
-                      <button
-                        key={h}
-                        onClick={() => setInfusionHours(h)}
-                        className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${
-                          infusionHours === h 
-                            ? "bg-indigo-600 text-white shadow-sm" 
-                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                        }`}
-                      >
-                        {h}h
-                      </button>
-                    ))}
-                    <div className="relative flex items-center">
-                      <input 
-                        type="number"
-                        className="w-10 p-1 text-[10px] font-bold border rounded outline-none focus:ring-1 focus:ring-indigo-500"
-                        value={infusionHours}
-                        onChange={(e) => setInfusionHours(Math.max(1, Number(e.target.value)))}
-                      />
-                      <span className="absolute right-1 text-[8px] font-bold text-slate-400 pointer-events-none">h</span>
-                    </div>
-                  </div>
+              <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                <span className="text-xs text-slate-500">Infusion Duration:</span>
+                <div className="flex gap-1">
+                  {[24, 16, 12].map((h) => (
+                    <button
+                      key={h}
+                      onClick={() => setInfusionHours(h)}
+                      className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${
+                        infusionHours === h 
+                          ? "bg-indigo-600 text-white shadow-sm" 
+                          : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      }`}
+                    >
+                      {h}h
+                    </button>
+                  ))}
+                  <input 
+                    type="number"
+                    className="w-10 p-1 text-[10px] font-bold border rounded outline-none focus:ring-1 focus:ring-indigo-500"
+                    value={infusionHours}
+                    onChange={(e) => setInfusionHours(Math.max(1, Number(e.target.value)))}
+                  />
                 </div>
-                <p className="text-[10px] text-slate-400 italic">
-                  * Based on a total volume of {totalVolume} mL.
-                </p>
               </div>
             </div>
           </div>

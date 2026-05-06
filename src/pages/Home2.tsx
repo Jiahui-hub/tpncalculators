@@ -40,8 +40,15 @@ export default function Home() {
       protected: false,
     },
     {
+      title: "Malnutrition Screening",
+      description: "GLIM, NRS 2002 & MUST tools",
+      route: "/calculators/malnutrition-screening",
+      icon: "📋",
+      protected: false,
+    },
+    {
       title: "TPN Assistant",
-      description: "Osmolarity & Ca-PO4 Compatibility",
+      description: "Clinical Compounding",
       route: "/calculators/tpn-assistant",
       icon: "💧",
       protected: true,
