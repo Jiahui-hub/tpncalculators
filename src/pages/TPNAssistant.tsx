@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiArrowLeft, FiPlus, FiTrash2, FiAlertTriangle, FiCheckCircle } from "react-icons/fi";
+import { FiArrowLeft, FiPlus, FiTrash2, FiAlertTriangle, FiCheckCircle, FiInfo } from "react-icons/fi";
 
 interface Bag {
   name: string;
@@ -12,19 +12,44 @@ interface Bag {
   aaGrams: number;
   glucoseGrams: number;
   lipidGrams: number;
+  kcal: number;
 }
 
 const CONVENIENCE_BAGS: Bag[] = [
-  { name: "SMOFKabiven Central (1477 mL)", volume: 1477, osmolarity: 1500, baseCa: 3.8, basePO4: 19, isCentral: true, aaGrams: 49.3, glucoseGrams: 187, lipidGrams: 56 },
-  { name: "SMOFKabiven Central (986 mL)", volume: 986, osmolarity: 1500, baseCa: 2.5, basePO4: 12, isCentral: true, aaGrams: 32.9, glucoseGrams: 125, lipidGrams: 38 },
-  { name: "SMOFKabiven EF (986 mL)", volume: 986, osmolarity: 1300, baseCa: 0, basePO4: 2.8, isCentral: true, aaGrams: 32.9, glucoseGrams: 125, lipidGrams: 38 },
-  { name: "Nutriflex Omega Special (625 mL)", volume: 625, osmolarity: 1540, baseCa: 2.65, basePO4: 10, isCentral: true, aaGrams: 35.9, glucoseGrams: 90, lipidGrams: 25 },
-  { name: "Periolimel N4E (1500 mL)", volume: 1500, osmolarity: 760, baseCa: 3.0, basePO4: 12.7, isCentral: false, aaGrams: 33, glucoseGrams: 112.5, lipidGrams: 45 },
-  { name: "Manual Compounded Bag", volume: 1000, osmolarity: 0, baseCa: 0, basePO4: 0, isCentral: true, aaGrams: 0, glucoseGrams: 0, lipidGrams: 0 },
+  { name: "SMOFKabiven Central (1477 mL)", volume: 1477, osmolarity: 1500, baseCa: 3.7, basePO4: 15, isCentral: true, aaGrams: 75, glucoseGrams: 187, lipidGrams: 56, kcal: 1600 },
+  { name: "SMOFKabiven Central (986 mL)", volume: 986, osmolarity: 1500, baseCa: 2.5, basePO4: 10, isCentral: true, aaGrams: 50, glucoseGrams: 125, lipidGrams: 38, kcal: 1100 },
+  { name: "SMOFKabiven EF (986 mL)", volume: 986, osmolarity: 1500, baseCa: 0, basePO4: 0, isCentral: true, aaGrams: 50, glucoseGrams: 125, lipidGrams: 38, kcal: 1100 },
+  { name: "Nutriflex Omega Special (625 mL)", volume: 625, osmolarity: 1540, baseCa: 1.4, basePO4: 7.5, isCentral: true, aaGrams: 36, glucoseGrams: 90, lipidGrams: 25, kcal: 740 },
+  { name: "Periolimel N4E (1500 mL)", volume: 1500, osmolarity: 760, baseCa: 3.0, basePO4: 12.7, isCentral: false, aaGrams: 38, glucoseGrams: 112.5, lipidGrams: 45, kcal: 1050 },
+  { name: "Manual Compounded Bag", volume: 1000, osmolarity: 0, baseCa: 0, basePO4: 0, isCentral: true, aaGrams: 0, glucoseGrams: 0, lipidGrams: 0, kcal: 0 },
 ];
 
 export default function TPNAssistant() {
   const navigate = useNavigate();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState(false);
+
+  useEffect(() => {
+    // Check if previously authorized in this session
+    if (sessionStorage.getItem("tpn_authorized") === "true") {
+      setIsAuthorized(true);
+    }
+  }, []);
+
+  const handlePinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // In a real app, this would be a secure hash check. 
+    // Using a standard clinical tool code here as requested for restriction.
+    if (pin === "8899") { // Specific PIN for TPN access
+      setIsAuthorized(true);
+      sessionStorage.setItem("tpn_authorized", "true");
+      setPinError(false);
+    } else {
+      setPinError(true);
+      setPin("");
+    }
+  };
 
   useEffect(() => {
     if (localStorage.getItem("pharmacistMode") !== "true") {
@@ -33,9 +58,12 @@ export default function TPNAssistant() {
   }, [navigate]);
 
   const [selectedBagIndex, setSelectedBagIndex] = useState(0);
+  const [prescribedBagVolume, setPrescribedBagVolume] = useState(1477);
   const [patientWeight, setPatientWeight] = useState(70);
   const [patientHeight, setPatientHeight] = useState(170);
+  const [patientSex, setPatientSex] = useState<"male" | "female">("male");
   const [patientAge, setPatientAge] = useState(60);
+
   const [addedNa, setAddedNa] = useState(0);
   const [addedK, setAddedK] = useState(0);
   const [addedMg, setAddedMg] = useState(0);
@@ -57,18 +85,67 @@ export default function TPNAssistant() {
   const currentBag = CONVENIENCE_BAGS[selectedBagIndex];
   const isManual = currentBag.name === "Manual Compounded Bag";
 
-  const additiveVolume = (hasAddaven ? 10 : 0) + (hasVitamins ? 10 : 0) + glutamineVolume;
+  // Sync prescribed volume when bag changes
+  useEffect(() => {
+    if (!isManual) {
+      setPrescribedBagVolume(currentBag.volume);
+    }
+  }, [selectedBagIndex, isManual, currentBag.volume]);
+
+  // Derived Metrics
+  const bmi = useMemo(() => {
+    if (patientHeight <= 0) return 0;
+    return patientWeight / Math.pow(patientHeight / 100, 2);
+  }, [patientWeight, patientHeight]);
+
+  const ibw = useMemo(() => {
+    if (patientHeight <= 0) return 0;
+    const heightInches = patientHeight / 2.54;
+    const base = patientSex === "male" ? 50 : 45.5;
+    const calculated = base + 2.3 * (heightInches - 60);
+    return Math.max(calculated, 0);
+  }, [patientHeight, patientSex]);
+
+  const ajbw = useMemo(() => {
+    if (ibw <= 0 || patientWeight <= ibw) return patientWeight;
+    return ibw + 0.4 * (patientWeight - ibw);
+  }, [patientWeight, ibw]);
+
+  const isObese = bmi >= 30;
+  const effectiveWeight = isObese ? ajbw : patientWeight;
+
+  const intrinsicNa = useMemo(() => {
+    if (!isManual) return 0;
+    return (manualAAVol * 5.3) / 1000;
+  }, [isManual, manualAAVol]);
+
+
+  // Electrolyte volumes based on user input concentrations
+  const electrolyteVolume = useMemo(() => {
+    return (
+      (addedNa / 3.4) +              // Sodium 20% (3.4 mmol per 1 mL)
+      (addedK * (10 / 13.41)) +     // Potassium 13.41 mmol per 10mL
+      (addedMg * (5 / 10)) +        // Magnesium 10 mmol per 5mL
+      (addedCa * (10 / 2.1)) +       // Calcium 2.1 mmol per 10mL
+      (addedPO4 * (10 / 10))         // Phosphate 10 mmol per 10mL
+    );
+  }, [addedNa, addedK, addedMg, addedCa, addedPO4]);
+
+  const scalingFactor = isManual ? 1 : prescribedBagVolume / currentBag.volume;
+
+  const additiveVolume = (hasAddaven ? 10 : 0) + (hasVitamins ? 10 : 0) + glutamineVolume + electrolyteVolume;
   const totalVolume = (isManual 
     ? (manualDextroseVol + manualAAVol + manualLipidVol + manualWaterVol) 
-    : currentBag.volume) + additiveVolume;
+    : prescribedBagVolume) + additiveVolume;
   
   // Calculations
   const finalOsmolarity = useMemo(() => {
     let baseOsmTotal = 0;
     if (isManual) {
-      baseOsmTotal = (manualDextroseVol * 2.525) + (manualAAVol * 1.0) + (manualLipidVol * 0.38);
+      baseOsmTotal = (manualDextroseVol * 2.525) + (manualAAVol * 1.5) + (manualLipidVol * 0.38);
     } else {
-      baseOsmTotal = currentBag.osmolarity * (currentBag.volume / 1000);
+      // Use the actual osmoles from the full bag scaled to partial volume
+      baseOsmTotal = (currentBag.osmolarity * (currentBag.volume / 1000)) * scalingFactor;
     }
     
     const additiveOsmTotal = 
@@ -78,10 +155,10 @@ export default function TPNAssistant() {
       (glutamineVolume * 0.921);
 
     return (baseOsmTotal + additiveOsmTotal) / (totalVolume / 1000);
-  }, [isManual, currentBag, addedNa, addedK, addedMg, addedCa, addedPO4, totalVolume, manualDextroseVol, manualAAVol, manualLipidVol, manualWaterVol, hasAddaven, hasVitamins, glutamineVolume]);
+  }, [isManual, currentBag, addedNa, addedK, addedMg, addedCa, addedPO4, totalVolume, manualDextroseVol, manualAAVol, manualLipidVol, manualWaterVol, hasAddaven, hasVitamins, glutamineVolume, scalingFactor]);
 
-  const totalCa = currentBag.baseCa + addedCa;
-  const totalPO4 = currentBag.basePO4 + addedPO4;
+  const totalCa = (currentBag.baseCa * scalingFactor) + addedCa;
+  const totalPO4 = (currentBag.basePO4 * scalingFactor) + addedPO4;
 
   const isNutriflex = currentBag.name.includes("Nutriflex");
   const caConcentration = totalCa / (totalVolume / 1000);
@@ -119,16 +196,80 @@ export default function TPNAssistant() {
   }, [isNutriflex, currentBag.volume, addedNa, addedK, addedMg, addedCa, addedPO4]);
 
   const macronutrients = useMemo(() => {
-    const glucose = isManual ? (manualDextroseVol * 0.5) : currentBag.glucoseGrams;
-    const aa = (isManual ? (manualAAVol * 0.1) : currentBag.aaGrams) + (glutamineVolume * 0.2);
-    const lipid = isManual ? (manualLipidVol * 0.2) : currentBag.lipidGrams;
+    let glucose = 0;
+    let aa = (glutamineVolume * 0.2); // Dipeptiven adds protein
+    let lipid = 0;
+    let totalKcal = (glutamineVolume * 0.2 * 4); // Dipeptiven kcal from protein
+
+    if (isManual) {
+      glucose = manualDextroseVol * 0.5;
+      aa += (manualAAVol * 0.15);
+      lipid = manualLipidVol * 0.2;
+      totalKcal += (glucose * 4) + (manualAAVol * 0.15 * 4) + (lipid * 9);
+    } else {
+      glucose = currentBag.glucoseGrams * scalingFactor;
+      aa += currentBag.aaGrams * scalingFactor;
+      lipid = currentBag.lipidGrams * scalingFactor;
+      totalKcal += currentBag.kcal * scalingFactor;
+    }
     
-    const npc = (glucose * 4) + (lipid * 9);
+    const npc = totalKcal - (aa * 4);
     const nitrogen = aa / 6.25;
     const ratio = nitrogen > 0 ? npc / nitrogen : 0;
 
-    return { glucose, aa, lipid, npc, nitrogen, ratio };
-  }, [isManual, currentBag, manualDextroseVol, manualAAVol, manualLipidVol, glutamineVolume]);
+    return { glucose, aa, lipid, npc, nitrogen, ratio, kcal: totalKcal };
+  }, [isManual, currentBag, manualDextroseVol, manualAAVol, manualLipidVol, glutamineVolume, scalingFactor]);
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
+        <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl space-y-6">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <FiAlertTriangle size={32} />
+            </div>
+            <h2 className="text-2xl font-black text-slate-800">Restricted Access</h2>
+            <p className="text-slate-500 text-sm mt-2">The TPN Assistant is a restricted clinical tool. Please enter the Pharmacist PIN to proceed.</p>
+          </div>
+
+          <form onSubmit={handlePinSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Pharmacist PINCODE</label>
+              <input 
+                type="password"
+                autoFocus
+                className={`w-full p-4 text-center text-2xl font-black tracking-[1em] border-2 rounded-2xl outline-none transition-all ${
+                  pinError ? "border-rose-300 bg-rose-50 text-rose-600" : "border-slate-100 bg-slate-50 focus:border-indigo-500 text-slate-800"
+                }`}
+                value={pin}
+                onChange={(e) => {
+                  setPin(e.target.value);
+                  setPinError(false);
+                }}
+                maxLength={4}
+                placeholder="****"
+              />
+              {pinError && <p className="text-xs text-rose-500 font-bold text-center mt-2">Incorrect PIN. Access Denied.</p>}
+            </div>
+            <button 
+              type="submit"
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-lg transition-all active:scale-95 disabled:opacity-50"
+              disabled={pin.length < 4}
+            >
+              Verify Identity
+            </button>
+            <button 
+              type="button"
+              onClick={() => navigate("/")}
+              className="w-full py-2 text-slate-400 hover:text-slate-600 font-bold text-xs"
+            >
+              Cancel & Return Home
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
@@ -141,54 +282,142 @@ export default function TPNAssistant() {
         </button>
 
         <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">TPN Assistant</h1>
-        <p className="text-center text-gray-500 mb-8 font-medium">Clinical Compounding</p>
+        <p className="text-center text-gray-500 mb-8 font-medium">Clinical Compounding & Practical Monitoring</p>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <section className="bg-slate-50 p-5 rounded-xl border border-slate-200">
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-4">1. Patient Metrics</h2>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Weight (kg)</label>
-                  <input 
-                    type="number" 
-                    className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
-                    value={patientWeight === 0 ? "" : patientWeight}
-                    onChange={(e) => setPatientWeight(e.target.value === "" ? 0 : Number(e.target.value))}
-                  />
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Sex</label>
+                    <div className="flex gap-2">
+                      {(["male", "female"] as const).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setPatientSex(s)}
+                          className={`flex-1 py-2 text-xs font-bold rounded capitalize transition-all ${
+                            patientSex === s 
+                              ? "bg-indigo-600 text-white shadow-sm" 
+                              : "bg-white text-slate-400 border border-slate-200 hover:border-indigo-200"
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Age (yr)</label>
+                    <input 
+                      type="number" 
+                      className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                      value={patientAge === 0 ? "" : patientAge}
+                      onChange={(e) => setPatientAge(e.target.value === "" ? 0 : Number(e.target.value))}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Height (cm)</label>
-                  <input 
-                    type="number" 
-                    className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
-                    value={patientHeight === 0 ? "" : patientHeight}
-                    onChange={(e) => setPatientHeight(e.target.value === "" ? 0 : Number(e.target.value))}
-                  />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Weight (kg)</label>
+                    <input 
+                      type="number" 
+                      className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                      value={patientWeight === 0 ? "" : patientWeight}
+                      onChange={(e) => setPatientWeight(e.target.value === "" ? 0 : Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Height (cm)</label>
+                    <input 
+                      type="number" 
+                      className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                      value={patientHeight === 0 ? "" : patientHeight}
+                      onChange={(e) => setPatientHeight(e.target.value === "" ? 0 : Number(e.target.value))}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Age (yr)</label>
-                  <input 
-                    type="number" 
-                    className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
-                    value={patientAge === 0 ? "" : patientAge}
-                    onChange={(e) => setPatientAge(e.target.value === "" ? 0 : Number(e.target.value))}
-                  />
-                </div>
+
+                {patientWeight > 0 && patientHeight > 0 && (
+                  <div className="p-3 bg-white rounded-lg border border-slate-100 grid grid-cols-3 gap-2 text-center text-[10px]">
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-slate-400 uppercase">BMI</p>
+                      <p className={`font-black text-xs ${isObese ? "text-rose-600" : "text-slate-700"}`}>
+                        {bmi.toFixed(1)}
+                      </p>
+                    </div>
+                    <div className="space-y-0.5 border-x border-slate-50">
+                      <p className="font-bold text-slate-400 uppercase">IBW</p>
+                      <p className="font-black text-xs text-slate-700">
+                        {ibw.toFixed(1)} kg
+                      </p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-slate-400 uppercase">AjBW</p>
+                      <p className={`font-black text-xs ${isObese ? "text-indigo-600" : "text-slate-700"}`}>
+                        {ajbw.toFixed(1)} kg
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {isObese && (
+                  <div className="flex items-center gap-2 p-2 bg-indigo-50 rounded border border-indigo-100 text-[10px] text-indigo-700 font-medium">
+                    <FiAlertTriangle className="shrink-0" />
+                    <span>Obese (BMI ≥ 30). Using Adjusted Body Weight ({ajbw.toFixed(1)}kg) for calculations.</span>
+                  </div>
+                )}
               </div>
             </section>
 
             <section className="bg-slate-50 p-5 rounded-xl border border-slate-200">
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-4">2. Select Base Bag</h2>
-              <select 
-                className="w-full p-3 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                value={selectedBagIndex}
-                onChange={(e) => setSelectedBagIndex(Number(e.target.value))}
-              >
-                {CONVENIENCE_BAGS.map((bag, i) => (
-                  <option key={i} value={i}>{bag.name}</option>
-                ))}
-              </select>
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Convenience Bag Type</label>
+                  <select 
+                    className="w-full p-3 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                    value={selectedBagIndex}
+                    onChange={(e) => setSelectedBagIndex(Number(e.target.value))}
+                  >
+                    {CONVENIENCE_BAGS.map((bag, i) => (
+                      <option key={i} value={i}>{bag.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {!isManual && (
+                  <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="text-xs font-black text-indigo-900 uppercase">Volume to Infuse (mL)</label>
+                      <span className="text-[10px] font-bold text-indigo-400">BAG MAX: {currentBag.volume} mL</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <input 
+                        type="range"
+                        min={100}
+                        max={currentBag.volume}
+                        step={10}
+                        className="flex-1 accent-indigo-600 h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer"
+                        value={prescribedBagVolume}
+                        onChange={(e) => setPrescribedBagVolume(Number(e.target.value))}
+                      />
+                      <input 
+                        type="number"
+                        className="w-24 p-2 bg-white border border-indigo-200 rounded-lg text-center font-black text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        value={prescribedBagVolume}
+                        max={currentBag.volume}
+                        onChange={(e) => setPrescribedBagVolume(Math.min(currentBag.volume, Number(e.target.value)))}
+                      />
+                    </div>
+                    <p className="text-[10px] text-indigo-400 mt-2 italic px-1">
+                      * Nutrients will be scaled proportionally to {((prescribedBagVolume / currentBag.volume) * 100).toFixed(0)}% of full bag contents.
+                    </p>
+                  </div>
+                )}
+              </div>
 
               {isManual && (
                 <div className="mt-4 p-4 bg-white rounded-lg border border-slate-200 shadow-inner">
@@ -205,7 +434,15 @@ export default function TPNAssistant() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase">Aminoven 10% (mL)</label>
+                      <div className="flex items-center gap-1">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Aminoplasmal 15% (mL)</label>
+                        <div className="group relative">
+                          <FiInfo className="text-indigo-400 cursor-help" size={12} />
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                            Contains 150g AA and 5.3 mmol Sodium per 1000 mL.
+                          </div>
+                        </div>
+                      </div>
                       <input 
                         type="number" 
                         className="w-full p-2 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
@@ -283,21 +520,62 @@ export default function TPNAssistant() {
                 </label>
 
                 <div className="p-3 bg-white rounded-lg border border-slate-200">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-sm font-bold text-slate-700">Dipeptiven (Glutamine)</p>
-                      <p className="text-[10px] text-slate-500">100 mL bottle (+92 mOsm)</p>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-bold text-slate-700">Dipeptiven (Glutamine)</p>
+                        <p className="text-[10px] text-slate-500 tracking-tight">20g/100mL bottle (+92 mOsm)</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => setGlutamineVolume(Math.max(0, glutamineVolume - 50))}
+                          className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
+                        >-</button>
+                        <input 
+                          type="number"
+                          className="w-16 text-center p-1 border rounded font-black text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                          value={glutamineVolume === 0 ? "" : glutamineVolume}
+                          placeholder="0"
+                          onChange={(e) => setGlutamineVolume(e.target.value === "" ? 0 : Number(e.target.value))}
+                        />
+                        <button 
+                          onClick={() => setGlutamineVolume(glutamineVolume + 50)}
+                          className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
+                        >+</button>
+                      </div>
                     </div>
-                    <button 
-                      onClick={() => setGlutamineVolume(glutamineVolume === 100 ? 0 : 100)}
-                      className={`px-4 py-2 rounded-lg border font-bold transition-all ${
-                        glutamineVolume === 100 
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md" 
-                          : "bg-white text-slate-400 border-slate-200 hover:border-indigo-300 hover:text-indigo-500"
-                      }`}
-                    >
-                      {glutamineVolume === 100 ? "Included" : "Add 100mL"}
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setGlutamineVolume(100)}
+                        className={`flex-1 py-1 px-2 rounded text-[10px] font-black transition-all ${
+                          glutamineVolume === 100 
+                            ? "bg-indigo-600 text-white shadow-sm" 
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                      >
+                        100 mL (1 Bottle)
+                      </button>
+                      <button 
+                        onClick={() => setGlutamineVolume(200)}
+                        className={`flex-1 py-1 px-2 rounded text-[10px] font-black transition-all ${
+                          glutamineVolume === 200 
+                            ? "bg-indigo-600 text-white shadow-sm" 
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                      >
+                        200 mL (2 Bottles)
+                      </button>
+                      <button 
+                        onClick={() => setGlutamineVolume(0)}
+                        className={`py-1 px-3 rounded text-[10px] font-black transition-all ${
+                          glutamineVolume === 0 
+                            ? "bg-rose-600 text-white shadow-sm" 
+                            : "bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600"
+                        }`}
+                      >
+                        None
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -310,30 +588,30 @@ export default function TPNAssistant() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-center">
-                  <p className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Energy</p>
+                  <p className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Total Energy</p>
                   <p className="text-2xl font-black text-indigo-900">
-                    {patientWeight > 0 ? (macronutrients.npc / patientWeight).toFixed(1) : "0"}
+                    {effectiveWeight > 0 ? (macronutrients.kcal / effectiveWeight).toFixed(1) : "0"}
                     <span className="text-xs ml-1">kcal/kg</span>
                   </p>
                 </div>
                 <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-center">
                   <p className="text-[10px] font-bold text-emerald-400 uppercase mb-1">Protein</p>
                   <p className="text-2xl font-black text-emerald-900">
-                    {patientWeight > 0 ? (macronutrients.aa / patientWeight).toFixed(1) : "0"}
+                    {effectiveWeight > 0 ? (macronutrients.aa / effectiveWeight).toFixed(1) : "0"}
                     <span className="text-xs ml-1">g/kg</span>
                   </p>
                 </div>
                 <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 text-center">
                   <p className="text-[10px] font-bold text-amber-400 uppercase mb-1">Carbs</p>
                   <p className="text-2xl font-black text-amber-900">
-                    {patientWeight > 0 ? (macronutrients.glucose / patientWeight).toFixed(1) : "0"}
+                    {effectiveWeight > 0 ? (macronutrients.glucose / effectiveWeight).toFixed(1) : "0"}
                     <span className="text-xs ml-1">g/kg</span>
                   </p>
                 </div>
                 <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 text-center">
                   <p className="text-[10px] font-bold text-rose-400 uppercase mb-1">Fat</p>
                   <p className="text-2xl font-black text-rose-900">
-                    {patientWeight > 0 ? (macronutrients.lipid / patientWeight).toFixed(1) : "0"}
+                    {effectiveWeight > 0 ? (macronutrients.lipid / effectiveWeight).toFixed(1) : "0"}
                     <span className="text-xs ml-1">g/kg</span>
                   </p>
                 </div>
@@ -404,13 +682,22 @@ export default function TPNAssistant() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between p-2 bg-indigo-50 rounded-lg border border-indigo-100">
                   <span className="text-indigo-600 font-bold">Total Fluid Intake:</span>
-                  <span className="font-black text-indigo-700">{totalVolume} mL</span>
+                  <span className="font-black text-indigo-700">{totalVolume.toFixed(1)} mL</span>
                 </div>
                 <div className="flex justify-between px-2">
                   <span className="text-slate-500">Fluid per weight:</span>
-                  <span className="font-bold">{patientWeight > 0 ? (totalVolume / patientWeight).toFixed(1) : "0"} mL/kg</span>
+                  <span className="font-bold">{effectiveWeight > 0 ? (totalVolume / effectiveWeight).toFixed(1) : "0"} mL/kg</span>
                 </div>
-                <div className="flex justify-between px-2">
+                <div className="flex justify-between px-2 pt-1 border-t border-slate-50 mt-1">
+                  <span className="text-indigo-600 font-bold text-[11px]">Total Sodium:</span>
+                  <span className="font-black text-indigo-700">{(addedNa + intrinsicNa).toFixed(1)} mmol</span>
+                </div>
+                {intrinsicNa > 0 && (
+                  <div className="flex justify-between px-2 text-[10px] text-slate-400 italic">
+                    <span>(Incl. {intrinsicNa.toFixed(1)} mmol from AA)</span>
+                  </div>
+                )}
+                <div className="flex justify-between px-2 mt-1">
                   <span className="text-slate-500">Total Calcium:</span>
                   <span className="font-bold">{totalCa.toFixed(1)} mmol</span>
                 </div>
@@ -516,7 +803,7 @@ function AdditiveInput({ label, value, onChange, color }: { label: string, value
           onClick={() => onChange(value + 1)}
           className="w-8 h-8 flex items-center justify-center rounded bg-white border border-slate-200 hover:bg-slate-100"
         >
-          <FiPlus />
+          +
         </button>
       </div>
     </div>

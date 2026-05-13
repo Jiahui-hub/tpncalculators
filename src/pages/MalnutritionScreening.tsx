@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { FiArrowLeft, FiAlertCircle, FiCheckCircle, FiInfo } from "react-icons/fi";
+import { useNavigate, Link } from "react-router-dom";
+import { FiArrowLeft, FiAlertCircle, FiCheckCircle, FiInfo, FiExternalLink } from "react-icons/fi";
 
 type ScreeningTool = "GLIM" | "NRS2002" | "MUST";
 
@@ -45,6 +45,55 @@ export default function MalnutritionScreening() {
           {activeTool === "NRS2002" && <NRS2002Tool />}
           {activeTool === "MUST" && <MUSTTool />}
         </div>
+
+        {/* Global References */}
+        <div className="mt-12 pt-8 border-t border-slate-200">
+          <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 px-4">Clinical References</h5>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-4 opacity-75">
+            <div className="space-y-2">
+              <p className="text-xs font-black text-slate-800">1. NRS-2002</p>
+              <p className="text-[10px] text-slate-500 leading-snug">Kondrup J, Rasmussen HH, Hamberg O, Stanga Z. Nutritional risk screening (NRS 2002): a new method based on an analysis of controlled clinical trials. Clin Nutr. 2003.</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-black text-slate-800">2. MUST Tool</p>
+              <p className="text-[10px] text-slate-500 leading-snug">BAPEN. Malnutrition Universal Screening Tool (MUST). Developed by the Malnutrition Advisory Group (MAG).</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-black text-slate-800">3. GLIM Criteria</p>
+              <p className="text-[10px] text-slate-500 leading-snug">Cederholm T, et al. GLIM criteria for the diagnosis of malnutrition - A consensus report from the global clinical nutrition community. J Cachexia Sarcopenia Muscle. 2019.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ClinicalBridge({ isAtRisk }: { isAtRisk: boolean }) {
+  return (
+    <div className={`mt-10 p-8 rounded-3xl text-white shadow-2xl animate-in fade-in zoom-in duration-500 ${
+      isAtRisk ? "bg-indigo-900" : "bg-slate-800"
+    }`}>
+      <div className="flex flex-col md:flex-row items-center gap-6">
+        <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+          <FiExternalLink className="text-indigo-300" size={32} />
+        </div>
+        <div className="flex-1 text-center md:text-left">
+          <h4 className="text-lg font-black uppercase tracking-tight mb-2">Next Step: Calculate Regime</h4>
+          <p className="text-indigo-100 text-sm font-medium leading-relaxed mb-4">
+            {isAtRisk 
+              ? <>Patient identified at nutritional risk. <b>"Start low, go slow"</b>: Monitor closely for <b>Refeeding Syndrome</b> when initiating nutrition.</>
+              : "No immediate malnutrition risk detected. You can proceed to TPN Planning if clinical indications require supplemental nutrition."}
+          </p>
+          <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+            <Link 
+              to="/tpn-assistant"
+              className="inline-flex items-center gap-2 bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-3 rounded-xl font-black transition-all shadow-lg active:scale-95"
+            >
+              Start TPN Planning <FiArrowLeft className="rotate-180" size={18} />
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -77,6 +126,7 @@ function GLIMTool() {
   const phenotypicMet = phenotypicCheck.weightLoss || phenotypicCheck.bmi || phenotypicCheck.muscleMass;
   const etiologicMet = etiologicCheck.reducedIntake || etiologicCheck.inflammation;
   const isMalnourished = phenotypicMet && etiologicMet;
+  const atRisk = isMalnourished || phenotypicMet || etiologicMet;
 
   const finalSeverity = useMemo(() => {
     if (!isMalnourished) return null;
@@ -258,6 +308,8 @@ function GLIMTool() {
           </div>
         </section>
       )}
+
+      <ClinicalBridge isAtRisk={atRisk} />
     </div>
   );
 }
@@ -311,6 +363,7 @@ function NRS2002Tool() {
   const needsSecondLevel = Object.values(initial).some(Boolean);
   const totalScore = needsSecondLevel ? (scoreNutStatus + scoreDisease + (age >= 70 ? 1 : 0)) : 0;
   const isAtRisk = totalScore >= 3;
+  const anyRisk = isAtRisk || needsSecondLevel;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -442,6 +495,8 @@ function NRS2002Tool() {
               : "Final score < 3. Rescreen weekly or per protocol."}
         </p>
       </div>
+
+      <ClinicalBridge isAtRisk={anyRisk} />
     </div>
   );
 }
@@ -453,6 +508,7 @@ function MUSTTool() {
 
   const totalScore = bmiScore + wtLossScore + acuteScore;
   const risk = totalScore === 0 ? "LOW" : totalScore === 1 ? "MEDIUM" : "HIGH";
+  const atRisk = risk !== "LOW";
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -526,6 +582,41 @@ function MUSTTool() {
             </ul>
           </div>
         </div>
+      </div>
+
+      <ClinicalBridge isAtRisk={atRisk} />
+    </div>
+  );
+}
+
+function PhenotypicSection({ title, description, value, options, onChange }: { 
+  title: string; 
+  description: string; 
+  value: string; 
+  options: { label: string; value: string; subtitle?: string }[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="px-2">
+        <p className="text-base font-black text-slate-800 tracking-tight">{title}</p>
+        <p className="text-sm font-medium text-slate-500 leading-tight">{description}</p>
+      </div>
+      <div className="flex gap-3">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={`flex-1 p-4 rounded-2xl border text-sm font-black transition-all ${
+              value === opt.value
+                ? "bg-indigo-600 border-indigo-700 text-white shadow-lg shadow-indigo-100 ring-2 ring-indigo-200"
+                : "bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:bg-slate-50"
+            }`}
+          >
+            {opt.label}
+            {opt.subtitle && <span className="block opacity-80 font-bold mt-2 text-xs leading-tight">{opt.subtitle}</span>}
+          </button>
+        ))}
       </div>
     </div>
   );
