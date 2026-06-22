@@ -11,6 +11,7 @@ import SodiumCalculator from "./pages/SodiumCalculator";
 import MagnesiumCalculator from "./pages/MagnesiumCalculator";
 import TPNAssistant from "./pages/TPNAssistant";
 import NutritionGoals from "./pages/NutritionGoals";
+import MalnutritionScreening from "./pages/MalnutritionScreening";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/calculators/potassium" element={<PotassiumCalculator />} />
         <Route path="/calculators/sodium" element={<SodiumCalculator />} />
         <Route path="/calculators/magnesium" element={<MagnesiumCalculator />} />
+        <Route path="/calculators/malnutrition-screening" element={<MalnutritionScreening />} />
         <Route path="/calculators/tpn-assistant" element={<TPNAssistant />} />
         <Route path="/calculators/nutrition-goals" element={<NutritionGoals />} />
       </Routes>

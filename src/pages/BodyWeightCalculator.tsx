@@ -9,10 +9,10 @@ export default function BodyWeightCalculator() {
   const [weight, setWeight] = useState(70); // kg
 
   // IBW (Devine Formula - Metric)
-  const heightOver152 = Math.max(0, height - 152.4);
-  const ibw = sex === "male" 
-    ? 50 + (0.91 * heightOver152) 
-    : 45.5 + (0.91 * heightOver152);
+  const rawIbw = sex === "male" 
+    ? 50 + (0.91 * (height - 152.4)) 
+    : 45.5 + (0.91 * (height - 152.4));
+  const ibw = Math.max(0, rawIbw);
 
   // BMI
   const bmi = weight / ((height / 100) ** 2);
@@ -122,7 +122,7 @@ export default function BodyWeightCalculator() {
               <div>
                 <p className="font-bold mb-1">Formulas:</p>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li><b>IBW:</b> Male: 50kg + 0.9 x (Height - 152.4cm); Female: 45.5kg + 0.9 x (Height - 152.4cm)</li>
+                  <li><b>IBW (Metric Devine):</b> Male: 50 kg + [0.91 × (Height in cm - 152.4)]; Female: 45.5 kg + [0.91 × (Height in cm - 152.4)]</li>
                   <li><b>AdjBW:</b> IBW + 0.4 × (Actual Weight - IBW)</li>
                   <li><b>BMI (Malaysia):</b> Underweight (&lt;18.5), Normal (18.5–22.9), Overweight (23–27.4), Obese (≥27.5)</li>
                 </ul>

@@ -100,9 +100,8 @@ export default function TPNAssistant() {
 
   const ibw = useMemo(() => {
     if (patientHeight <= 0) return 0;
-    const heightInches = patientHeight / 2.54;
     const base = patientSex === "male" ? 50 : 45.5;
-    const calculated = base + 2.3 * (heightInches - 60);
+    const calculated = base + 0.91 * (patientHeight - 152.4);
     return Math.max(calculated, 0);
   }, [patientHeight, patientSex]);
 
