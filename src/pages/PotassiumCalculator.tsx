@@ -162,20 +162,20 @@ export default function PotassiumCalculator() {
           <div className="space-y-6">
             <SectionCard title="Dose" content={
               <ul className="list-disc list-inside space-y-2 text-sm">
-                <li>IV infusion: individualized; initial 40–60 mmol</li>
-                <li>Normal daily requirement: 40–80 mmol</li>
-                <li>K &lt; 2.5 mmol/L: 40 mmol/hr (max concentration: 80 mmol/L; may require up to 400 mmol/day)</li>
-                <li>K &gt; 2.5 mmol/L: 10 mmol/hr (max concentration: 40 mmol/L; max dose 200 mmol/day)</li>
-                <li>K 3–3.5 mmol/L: PO 40–100 mmol/day in 2-3 divided doses</li>
+                <li>IV infusion: individualized; initial 40–60 mmol.</li>
+                <li>Normal daily requirement: 40–80 mmol.</li>
+                <li>K &lt; 2.5 mmol/L: 40 mmol/hr (max concentration: 80 mmol/L; may require up to 400 mmol/day).</li>
+                <li>K &gt; 2.5 mmol/L: 10 mmol/hr (max concentration: 40 mmol/L; max dose 200 mmol/day).</li>
+                <li>K 3–3.5 mmol/L: PO 40–100 mmol/day in 2-3 divided doses.</li>
               </ul>
             } />
             <SectionCard title="Administration" content={
               <ul className="list-disc list-inside space-y-2 text-sm">
-                <li>Peripheral line concentration: 10 mmol/100 mL, infusion rate: 10 mmol/hr</li>
-                <li>Central line concentration: 20–40 mmol/100 mL, infusion rate: 40 mmol/hr</li>
-                <li>IV Infusion: 1g KCl in 500 ml NS over 2-3 hours</li>
-                <li>Rapid correction: 1g KCl in 100 ml NS over 1 hour (ECG monitoring required)</li>
-                <li>Diluent: Normal saline only</li>
+                <li>Peripheral line concentration: 10 mmol/100 mL, infusion rate: 10 mmol/hr.</li>
+                <li>Central line concentration: 20–40 mmol/100 mL, infusion rate: 40 mmol/hr.</li>
+                <li>IV Infusion: 1g KCl in 500 ml NS over 2-3 hours.</li>
+                <li>Rapid correction: 1g KCl in 100 ml NS over 1 hour (ECG monitoring required).</li>
+                <li>Dilute with Normal saline only before use; not for bolus.</li>
               </ul>
             } />
             <SectionCard title="Notes" content={
@@ -183,15 +183,14 @@ export default function PotassiumCalculator() {
                 <li>1 vial KCl 10% (10ml) = 1g KCl</li>
                 <li>1g KCl = 13.41 mmol</li>
                 <li>1 mEq/L = 1 mmol/L</li>
-                <li>Dilute before use; not for bolus</li>
               </ul>
             } />
             <SectionCard title="Safety Guidance" content={
               <ul className="list-disc list-inside space-y-2 text-sm">
-                <li>Check renal & cardiac status before IV</li>
-                <li>Central access for rates &gt; 20 mmol/hr</li>
-                <li>Re-check K⁺ after every 40–60 mmol correction</li>
-                <li>Correct hypomagnesaemia if present</li>
+                <li>Check renal & cardiac status before IV.</li>
+                <li>Central access for rates &gt; 20 mmol/hr.</li>
+                <li>Re-check K⁺ after every 40–60 mmol correction.</li>
+                <li>Correct hypomagnesaemia if present.</li>
               </ul>
             } />
           </div>

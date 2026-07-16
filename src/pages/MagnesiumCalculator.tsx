@@ -131,6 +131,7 @@ export default function MagnesiumCalculator() {
                 <li>Fast correction: 1 amp in 100 mL NS/D5% over 1 hour.</li>
                 <li>IV dose: Each 5mL amp should be diluted by adding at least 7.5 mL of diluent.</li>
                 <li>Max rate: 2g/hr to avoid hypotension.</li>
+                <li>Use IM only if IV access is not available.</li>
                 <li>IM: Use diluted or undiluted. If to be diluted, add 1 amp to 5mL of diluent.</li>
               </ul>
             } />
