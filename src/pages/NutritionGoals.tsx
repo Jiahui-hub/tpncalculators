@@ -82,7 +82,8 @@ export default function NutritionGoals() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (localStorage.getItem("pharmacistMode") !== "true") {
+    const access = localStorage.getItem("tpn_app_access");
+    if (!access) {
       navigate("/");
     }
   }, [navigate]);

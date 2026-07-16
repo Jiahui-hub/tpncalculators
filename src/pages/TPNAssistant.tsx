@@ -26,21 +26,21 @@ const CONVENIENCE_BAGS: Bag[] = [
 
 export default function TPNAssistant() {
   const navigate = useNavigate();
-  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(localStorage.getItem("tpn_app_access") === "full");
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
 
   useEffect(() => {
-    // Check if previously authorized in this session
-    if (sessionStorage.getItem("tpn_authorized") === "true") {
+    const access = localStorage.getItem("tpn_app_access");
+    if (access === "full") {
       setIsAuthorized(true);
+    } else {
+      navigate("/");
     }
-  }, []);
+  }, [navigate]);
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would be a secure hash check. 
-    // Using a standard clinical tool code here as requested for restriction.
     if (pin === "8899") { // Specific PIN for TPN access
       setIsAuthorized(true);
       sessionStorage.setItem("tpn_authorized", "true");
@@ -50,12 +50,6 @@ export default function TPNAssistant() {
       setPin("");
     }
   };
-
-  useEffect(() => {
-    if (localStorage.getItem("pharmacistMode") !== "true") {
-      navigate("/");
-    }
-  }, [navigate]);
 
   const [selectedBagIndex, setSelectedBagIndex] = useState(0);
   const [prescribedBagVolume, setPrescribedBagVolume] = useState(1477);
