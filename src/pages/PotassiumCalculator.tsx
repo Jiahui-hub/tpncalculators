@@ -171,10 +171,11 @@ export default function PotassiumCalculator() {
             } />
             <SectionCard title="Administration" content={
               <ul className="list-disc list-inside space-y-2 text-sm">
-                <li>Peripheral: 10 mmol/100 mL</li>
-                <li>Central: 20–40 mmol/100 mL</li>
+                <li>Peripheral line concentration: 10 mmol/100 mL, infusion rate: 10 mmol/hr</li>
+                <li>Central line concentration: 20–40 mmol/100 mL, infusion rate: 40 mmol/hr</li>
                 <li>IV Infusion: 1g KCl in 500 ml NS over 2-3 hours</li>
                 <li>Rapid correction: 1g KCl in 100 ml NS over 1 hour (ECG monitoring required)</li>
+                <li>Diluent: Normal saline only</li>
               </ul>
             } />
             <SectionCard title="Notes" content={
@@ -189,7 +190,7 @@ export default function PotassiumCalculator() {
               <ul className="list-disc list-inside space-y-2 text-sm">
                 <li>Check renal & cardiac status before IV</li>
                 <li>Central access for rates &gt; 20 mmol/hr</li>
-                <li>Re-check K⁺ after every 40–60 mmol</li>
+                <li>Re-check K⁺ after every 40–60 mmol correction</li>
                 <li>Correct hypomagnesaemia if present</li>
               </ul>
             } />
